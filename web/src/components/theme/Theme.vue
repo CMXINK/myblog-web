@@ -1,55 +1,101 @@
 <template>
   <div class="theme">
     <header class="header">
-      <el-row class="menu">
+      <el-row class="menu hidden-xs-only">
         <el-col :span="3" :offset="2" class="menu-left">
           <font-awesome-icon icon="fa-solid  fa-star-and-crescent" class="fa-spin fa-2xl menu-left-icon" />
         </el-col>
         <el-col :span="10" :offset="2"
           ><el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal" @select="handleSelect" style="margin: auto; display: flex; justify-content: space-around">
-            <el-menu-item index="1"><i class="el-icon-s-home"></i>首页</el-menu-item>
-            <el-menu-item index="2"> <i class="el-icon-warning"></i>大事件 </el-menu-item>
-            <el-menu-item index="3"><i class="el-icon-star-on" style="font-weight: 700"></i>项目中心</el-menu-item>
-            <el-menu-item index="4"><i class="el-icon-s-management"></i>爱收藏</el-menu-item>
-            <el-menu-item index="5"><i class="el-icon-search"></i>Search</el-menu-item>
+            <el-menu-item v-for="(item, index) in data" :key="String(index)" :index="String(index)" @click="changeActiveIndex(String(index), item)"><i :class="item.iconClass"></i>{{ item.menuName }}</el-menu-item>
+            <el-menu-item index="100" @click="changeActiveIndex('100', 'search')"><i class="el-icon-search"></i>Search</el-menu-item>
           </el-menu></el-col
         >
-        <el-col :span="3" :offset="2" class="menu-right"><font-awesome-icon icon="fa-solid fa-right-to-bracket" /> 登录 </el-col>
+        <!-- <el-col :span="3" :offset="2" class="menu-right"><font-awesome-icon icon="fa-solid fa-right-to-bracket" /> 登录 </el-col> -->
+      </el-row>
+
+      <el-row class="hidden-sm-and-up menu-mobile">
+        <img src="../../../public/images/cat.png" />
+        <font-awesome-icon icon="fa-solid fa-bars" class="menu-mobile-icon" @click="dialogVisible = true" />
       </el-row>
     </header>
-    <slot> <Tinymce></Tinymce> </slot>
-    <div class="footer">
-      <div class="footerIcons">
-        <ul>
-          <li><font-awesome-icon icon="fa-brands fa-github" /></li>
-          <li><font-awesome-icon icon="fa-brands fa-qq" /></li>
-          <li><font-awesome-icon icon="fa-brands fa-weixin" /></li>
-        </ul>
-      </div>
-      <ul class="header">
-        <li>技术支撑</li>
-        <li>|</li>
-        <li>版权声明</li>
-        <li>|</li>
-        <li>网站统计</li>
-      </ul>
-      <div style="margin-top: 10px">Copyright © 2021 阿杰博客 | <a href="http://beian.miit.gov.cn/?spm=5176.19720258.J_9220772140.105.e9392c4adfmQib" style="color: lightgray">鄂ICP备2021022436号</a> |</div>
-    </div>
+    <!-- mobile弹出层 -->
+    <el-dialog :visible.sync="dialogVisible" :modal="false" custom-class="mobile-menu-model">
+      <div v-for="(item, index) in data" :key="index" :class="String(index) === activeIndex ? 'mobile-active' : ''" @click="changeActiveIndex(String(index), item)"><i :class="item.iconClass"></i>&nbsp;&nbsp;&nbsp;{{ item.menuName }}</div>
+      <div :class="'100' === activeIndex ? 'mobile-active' : ''" @click="changeActiveIndex('100', 'search')"><i class="el-icon-search"></i>&nbsp;&nbsp;&nbsp;搜索</div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import Tinymce from '../tinymce/Tinymce'
+import 'element-ui/lib/theme-chalk/display.css'
 export default {
-  components: {
-    Tinymce
-  },
+  inject: ['reload'],
   data() {
     return {
-      activeIndex: '1'
+      activeIndex: '0',
+      dialogVisible: false,
+      data: '',
+      content: '暂无内容'
     }
   },
+  created() {
+    this.$http.get('/pageindex/').then(res => {
+      this.data = res.data.data
+      this.activeIndex = sessionStorage.getItem('activeIndex') ? sessionStorage.getItem('activeIndex') : '0'
+    })
+  },
   methods: {
+    changeActiveIndex(index, item) {
+      sessionStorage.setItem('activeIndex', index)
+      this.activeIndex = index
+      this.dialogVisible = false
+      if (item.menuName === '首页') {
+        if (this.$route.fullPath === '/home/new') {
+          return
+        }
+        this.$router.push({
+          path: '/home/new'
+        })
+        this.reload()
+      } else if (item !== 'search') {
+        if (this.$route.fullPath === `/home/list?id=${item.id}`) {
+          return
+        }
+        this.$router.push({
+          path: '/home/list',
+          query: {
+            id: item.id
+          }
+        })
+        this.reload()
+      } else {
+        this.$prompt('', '', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          customClass: 'mySearchBox',
+          showConfirmButton: false,
+          showCancelButton: false,
+          inputPlaceholder: '请输入检索内容...',
+          showClose: false
+        })
+          .then(({ value }) => {
+            console.log(value)
+            if (value.length > 0) {
+              this.$router.push({
+                path: '/home/list',
+                query: {
+                  searchValue: value,
+                  isSearch: true
+                }
+              })
+            } else {
+              return false
+            }
+          })
+          .catch(() => {})
+      }
+    },
     handleSelect(key, keyPath) {
       console.log(key, keyPath)
     }
@@ -61,20 +107,29 @@ export default {
 .theme > .header {
   width: 100%;
   height: 100vh;
-  background-image: url('../../../public/images/banner-1.jpg');
-  border-top: 1px solid transparent;
-  background-size: cover;
-  background-position: 30% 30%;
-  background-repeat: no-repeat;
-  /* 当内容高度大于图片高度时，背景图像的位置相对于viewport固定 */
-  background-attachment: fixed;
-  /* 让背景图基于容器大小伸缩 */
-  background-size: cover;
+}
+.el-dialog {
+  border-radius: 10px;
+}
+.mobile-menu-model {
+  .mobile-active {
+    color: #8400fa;
+    font-size: 15px;
+    font-weight: bold;
+  }
+  div {
+    // text-align: center;
+    padding: 10px;
+    color: #333;
+  }
 }
 .menu {
   border: 1px solid transparent;
   margin-top: 30px;
   letter-spacing: 2px;
+  position: fixed;
+  width: 100%;
+  z-index: 3;
 }
 .el-menu-demo {
   border: none;
@@ -118,23 +173,27 @@ export default {
   font-size: 18px;
   color: #fff;
 }
-.footer {
-  margin-top: 40px;
-  text-align: center;
-  color: lightgray;
-  .footerIcons ul {
-    font-size: 24px;
-    width: 390px;
-    margin: auto;
-    color: #333;
-    display: flex;
-    justify-content: space-around;
+.menu-mobile {
+  width: 100%;
+  height: 120px;
+  position: fixed;
+  z-index: 2;
+  // background-color: rgba(0, 0, 0, 0.1);
+  img {
+    height: 90px;
+    position: absolute;
+    left: 20px;
+    top: 15px;
+    line-height: 90px;
   }
-  .header {
-    display: flex;
-    width: 360px;
-    margin: 20px auto 20px auto;
-    justify-content: space-around;
-  }
+}
+.menu-mobile-icon {
+  color: #fff;
+  font-weight: 700;
+  font-size: 30px;
+  position: absolute;
+  top: 50%;
+  right: 40px;
+  transform: translateY(-50%);
 }
 </style>

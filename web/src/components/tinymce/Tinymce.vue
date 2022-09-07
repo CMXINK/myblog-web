@@ -1,11 +1,12 @@
 <template>
   <div class="tinymce-editor">
-    <el-button size="20px" @click="tinymceGetdata">保存</el-button>
-    <Editor :id="tinymceId" :init="init" :disabled="disabled" v-model="content" ref="tinymce"></Editor>
+    <!-- <el-button size="20px" @click="tinymceGetdata">保存</el-button> -->
+    <Editor :id="tinymceId" :init="init" :disabled="disabled" v-model="content" ref="tinymce" @onBlur="contentSetter($refs.tinymce.value)"></Editor>
   </div>
 </template>
 
 <script>
+import { mapMutations } from 'vuex'
 import tinymceTemplate from './TinymceTemplate'
 import axios from 'axios'
 import tinymce from 'tinymce/tinymce' // tinymce默认hidden，不引入不显示
@@ -72,6 +73,7 @@ export default {
       }
     }
   },
+
   props: {
     // 内容
     value: {
@@ -96,7 +98,7 @@ export default {
     // 工具栏
     toolbar: {
       type: [String, Array],
-      default: 'undo redo |  formatselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | lists image media table | template searchreplace fullscreen preview'
+      default: 'undo redo |  formatselect | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | lists image media table | template searchreplace fullscreen preview|emoticons hr wordcount'
     }
   },
   data() {
@@ -175,20 +177,21 @@ export default {
   },
   mounted() {
     tinymce.init({})
+    this.$refs.tinymce.value = this.content
     // console.log(this.toolbar,'======')
   },
   methods: {
-    // onClick(e) {
-    //   this.$emit('onClick', e, tinymce)
-    // },
+    ...mapMutations('writeArticleOptions', ['contentSetter'])
     // // 可以添加一些自己的自定义事件，如清空内容
     // ObjectSelected(e) {
     //   this.$emit('ObjectSelected', e, tinymce)
     // },
-    // tinymceGetdata() {
-    //   // tinyMCE
-    //   console.log(this.$refs.tinymce.value)
-    // }
   }
 }
 </script>
+<style lang="less" scoped>
+.tinymce-editor {
+  margin: 40px 10px 0 10px !important;
+  // margin: auto;
+}
+</style>
